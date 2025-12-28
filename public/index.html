@@ -518,10 +518,28 @@
             document.getElementById('loading').classList.add('active');
 
             try {
-                // Use relative URL for Vercel deployment, or localhost for local dev
-                const apiUrl = window.location.hostname === 'localhost'
-                    ? 'http://localhost:8000/agentic-cx'
-                    : '/agentic-cx';
+                // Auto-detect backend: localhost → local FastAPI, Vercel → Render API, otherwise relative
+                const isLocal = window.location.hostname === 'localhost';
+                const isVercel = window.location.hostname.endsWith('vercel.app');
+                const apiBase = isLocal
+                    ? 'http://localhost:8000'
+                    : (isVercel ? 'https://agentic-ai-cx-poc.onrender.com' : '');
+
+                // Create backend status banner
+                try {
+                    const bannerEl = document.createElement('div');
+                    bannerEl.id = 'backend-status';
+                    bannerEl.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#0d6efd;color:#fff;padding:8px 12px;font-size:13px;z-index:9999;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.1)';
+                    bannerEl.textContent = `Backend: ${apiBase || window.location.origin} • checking...`;
+                    document.body.prepend(bannerEl);
+                    fetch(`${apiBase}/health`).then(r => {
+                        bannerEl.textContent = `Backend: ${apiBase || window.location.origin} • ${r.ok ? 'healthy' : 'error'}`;
+                    }).catch(() => {
+                        bannerEl.textContent = `Backend: ${apiBase || window.location.origin} • unreachable`;
+                    });
+                } catch { }
+
+                const apiUrl = `${apiBase}/agentic-cx`;
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
