@@ -1,31 +1,14 @@
 {
-    "version": 2,
-    "builds": [
+    "rewrites": [
         {
-            "src": "api/index.py",
-            "use": "@vercel/python",
-            "config": {
-                "maxLambdaSize": "15mb"
-            }
-        }
-    ],
-    "routes": [
-        {
-            "src": "/demo",
-            "dest": "/demo_ui.html"
+            "source": "/demo",
+            "destination": "/demo_ui.html"
         },
         {
-            "src": "/demo_ui.html",
-            "dest": "/demo_ui.html"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "api/index.py"
+            "source": "/(.*)",
+            "destination": "/api/index"
         }
     ],
-    "env": {
-        "PYTHONPATH": "/var/task"
-    },
     "functions": {
         "api/index.py": {
             "memory": 1024,
