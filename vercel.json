@@ -8,6 +8,13 @@
             "source": "/demo",
             "destination": "/demo_ui.html"
         }
+    ]
+}{
+    "rewrites": [
+        {
+            "source": "/demo",
+            "destination": "/demo_ui.html"
+        }
     ],
     "functions": {
         "api/index.py": {
@@ -15,27 +22,4 @@
             "maxDuration": 10
         }
     }
-}{
-    "rewrites": [
-        {
-            "source": "/demo",
-            "destination": "/demo_ui.html"
-        }
-    {
-            "rewrites": [
-                {
-                    "source": "/",
-                    "destination": "/demo_ui.html"
-                },
-                {
-                    "source": "/demo",
-                    "destination": "/demo_ui.html"
-                }
-            ],
-            "functions": {
-                "api/index.py": {
-                    "memory": 1024,
-                    "maxDuration": 10
-                }
-            }
-        }
+}
