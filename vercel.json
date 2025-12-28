@@ -2,12 +2,11 @@
     "version": 2,
     "builds": [
         {
-            "src": "main.py",
-            "use": "@vercel/python"
-        },
-        {
-            "src": "demo_ui.html",
-            "use": "@vercel/static"
+            "src": "api/index.py",
+            "use": "@vercel/python",
+            "config": {
+                "maxLambdaSize": "15mb"
+            }
         }
     ],
     "routes": [
@@ -16,11 +15,21 @@
             "dest": "/demo_ui.html"
         },
         {
+            "src": "/demo_ui.html",
+            "dest": "/demo_ui.html"
+        },
+        {
             "src": "/(.*)",
-            "dest": "main.py"
+            "dest": "api/index.py"
         }
     ],
     "env": {
-        "AGENTIC_MODE": "0"
+        "PYTHONPATH": "/var/task"
+    },
+    "functions": {
+        "api/index.py": {
+            "memory": 1024,
+            "maxDuration": 10
+        }
     }
 }
