@@ -7,6 +7,7 @@ Exposes the CX Agent via REST API:
 """
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -121,20 +122,26 @@ async def health_check():
 
 
 @app.get("/")
-async def root():
-    """Root endpoint with API information."""
+async def root_ui():
+    """Serve the demo UI (public/index.html)."""
+    index_path = os.path.join(os.path.dirname(__file__), "public", "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path, media_type="text/html")
     return {
         "service": "Agentic AI CX PoC",
-        "description": "Autonomous agent for contact center operations",
-        "endpoints": {
-            "POST /agentic-cx": "Submit customer message for processing",
-            "GET /health": "Health check",
-            "GET /docs": "Interactive API documentation (Swagger)",
-        },
-        "example_request": {
-            "customer_id": "123",
-            "message": "I missed my appointment yesterday, can I rebook it?"
-        }
+        "description": "UI file not found",
+    }
+
+
+@app.get("/demo")
+async def demo_ui():
+    """Alias to serve the demo UI."""
+    index_path = os.path.join(os.path.dirname(__file__), "public", "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path, media_type="text/html")
+    return {
+        "service": "Agentic AI CX PoC",
+        "description": "UI file not found",
     }
 
 
@@ -151,9 +158,6 @@ async def startup_event():
     print("Documentation: http://localhost:8000/docs")
     print("=" * 60)
 
-
-# Vercel serverless handler
-handler = app
 
 if __name__ == "__main__":
     import uvicorn

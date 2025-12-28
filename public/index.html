@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic AI CX - Demo Interactive</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .customer-select {
+            margin-bottom: 20px;
+        }
+
+        .customer-select label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .customer-select select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .customer-select select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .customer-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .customer-info.active {
+            display: block;
+        }
+
+        .customer-info p {
+            margin: 5px 0;
+            color: #555;
+        }
+
+        .customer-info strong {
+            color: #333;
+        }
+
+        .message-input {
+            margin-bottom: 20px;
+        }
+
+        .message-input label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .message-input textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .message-input textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .quick-messages {
+            margin-bottom: 20px;
+        }
+
+        .quick-messages p {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .quick-msg-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 5px 5px 5px 0;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .quick-msg-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.3s;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-btn:active {
+            transform: translateY(0);
+        }
+
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .response-card {
+            min-height: 400px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .response-content {
+            display: none;
+        }
+
+        .response-content.active {
+            display: block;
+        }
+
+        .intent-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: #e3f2fd;
+            color: #1976d2;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .status-badge.resolved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.escalated {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .metric {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .actions-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .actions-list li {
+            padding: 10px;
+            background: #f8f9fa;
+            margin: 5px 0;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .actions-list li::before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .explanation-box {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #17a2b8;
+            margin-top: 20px;
+        }
+
+        .explanation-box p {
+            color: #0c5460;
+            line-height: 1.6;
+        }
+
+        .appointment-details {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .appointment-details h4 {
+            color: #155724;
+            margin-bottom: 10px;
+        }
+
+        .appointment-details p {
+            margin: 5px 0;
+            color: #155724;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Agentic AI pour Customer Experience</h1>
+            <p>Démonstration Interactive - Agent IA Autonome</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Left Panel: Input -->
+            <div class="card">
+                <h2>
+                    <span>💬</span>
+                    Message Client
+                </h2>
+
+                <div class="customer-select">
+                    <label for="customer">Sélectionnez un client :</label>
+                    <select id="customer" onchange="updateCustomerInfo()">
+                        <option value="">-- Choisir un client --</option>
+                        <option value="123">Client 123 - Alice (Premium, Actif)</option>
+                        <option value="456">Client 456 - Bob (Standard, Historique problématique)</option>
+                        <option value="789">Client 789 - Charlie (Compte suspendu)</option>
+                    </select>
+                </div>
+
+                <div id="customer-info-123" class="customer-info">
+                    <p><strong>Nom:</strong> Alice</p>
+                    <p><strong>Type:</strong> Premium ⭐</p>
+                    <p><strong>Statut:</strong> <span style="color: #28a745;">Actif</span></p>
+                    <p><strong>Score fidélité:</strong> 850/1000</p>
+                    <p><strong>Historique:</strong> Aucun rendez-vous manqué</p>
+                </div>
+
+                <div id="customer-info-456" class="customer-info">
+                    <p><strong>Nom:</strong> Bob</p>
+                    <p><strong>Type:</strong> Standard</p>
+                    <p><strong>Statut:</strong> <span style="color: #ffc107;">Actif</span></p>
+                    <p><strong>Score fidélité:</strong> 620/1000</p>
+                    <p><strong>Historique:</strong> 3 rendez-vous manqués</p>
+                </div>
+
+                <div id="customer-info-789" class="customer-info">
+                    <p><strong>Nom:</strong> Charlie</p>
+                    <p><strong>Type:</strong> Standard</p>
+                    <p><strong>Statut:</strong> <span style="color: #dc3545;">Suspendu</span></p>
+                    <p><strong>Score fidélité:</strong> 350/1000</p>
+                    <p><strong>Historique:</strong> Compte inactif</p>
+                </div>
+
+                <div class="message-input">
+                    <label for="message">Message du client :</label>
+                    <textarea id="message"
+                        placeholder="Ex: J'ai raté mon rendez-vous hier, puis-je le rebooker ?"></textarea>
+                </div>
+
+                <div class="quick-messages">
+                    <p>Messages rapides :</p>
+                    <button class="quick-msg-btn"
+                        onclick="setMessage('I missed my appointment yesterday, can I rebook it?')">
+                        Rendez-vous manqué
+                    </button>
+                    <button class="quick-msg-btn" onclick="setMessage('I need to reschedule my appointment ASAP')">
+                        Reschedule urgent
+                    </button>
+                    <button class="quick-msg-btn" onclick="setMessage('What are your office hours?')">
+                        Horaires d'ouverture
+                    </button>
+                    <button class="quick-msg-btn" onclick="setMessage('I want to speak to a human agent')">
+                        Demande agent humain
+                    </button>
+                </div>
+
+                <button class="send-btn" onclick="sendMessage()">
+                    🚀 Envoyer à l'Agent IA
+                </button>
+            </div>
+
+            <!-- Right Panel: Response -->
+            <div class="card response-card">
+                <h2>
+                    <span>🎯</span>
+                    Réponse de l'Agent
+                </h2>
+
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>L'agent IA analyse la demande...</p>
+                </div>
+
+                <div id="empty-state" class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
+                    <p>Sélectionnez un client et envoyez un message pour voir la réponse de l'agent IA</p>
+                </div>
+
+                <div id="response-content" class="response-content">
+                    <!-- Dynamic content will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateCustomerInfo() {
+            const select = document.getElementById('customer');
+            const customerId = select.value;
+
+            // Hide all customer info
+            document.querySelectorAll('.customer-info').forEach(info => {
+                info.classList.remove('active');
+            });
+
+            // Show selected customer info
+            if (customerId) {
+                const infoDiv = document.getElementById(`customer-info-${customerId}`);
+                if (infoDiv) {
+                    infoDiv.classList.add('active');
+                }
+            }
+        }
+
+        function setMessage(msg) {
+            document.getElementById('message').value = msg;
+        }
+
+        async function sendMessage() {
+            const customerId = document.getElementById('customer').value;
+            const message = document.getElementById('message').value;
+
+            if (!customerId) {
+                alert('Veuillez sélectionner un client');
+                return;
+            }
+
+            if (!message.trim()) {
+                alert('Veuillez entrer un message');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('response-content').classList.remove('active');
+            document.getElementById('loading').classList.add('active');
+
+            try {
+                // Use relative URL for Vercel deployment, or localhost for local dev
+                const apiUrl = window.location.hostname === 'localhost'
+                    ? 'http://localhost:8000/agentic-cx'
+                    : '/api/agentic-cx';
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        customer_id: customerId,
+                        message: message
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('API Error');
+                }
+
+                const data = await response.json();
+                displayResponse(data);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').classList.remove('active');
+                document.getElementById('response-content').innerHTML = `
+                    <div style="background: #f8d7da; padding: 15px; border-radius: 8px; color: #721c24;">
+                        <h4>❌ Erreur</h4>
+                        <p>Impossible de contacter l'API. Assurez-vous que le serveur est démarré :</p>
+                        <code style="display: block; margin-top: 10px; padding: 10px; background: white; border-radius: 4px;">
+                            python3 main.py
+                        </code>
+                    </div>
+                `;
+                document.getElementById('response-content').classList.add('active');
+            }
+        }
+
+        function displayResponse(data) {
+            document.getElementById('loading').classList.remove('active');
+
+            const statusClass = data.status === 'resolved' ? 'resolved' : 'escalated';
+            const statusText = data.status === 'resolved' ? '✅ RÉSOLU' : '⚠️ ESCALADÉ';
+
+            let html = `
+                <div class="intent-badge">
+                    🎯 ${data.intent}
+                </div>
+                
+                <div class="status-badge ${statusClass}">
+                    ${statusText}
+                </div>
+
+                <div class="metric">
+                    <div class="metric-label">Objectif</div>
+                    <div class="metric-value">${data.goal}</div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="metric">
+                        <div class="metric-label">Type de décision</div>
+                        <div class="metric-value">${data.decision_type}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Confiance</div>
+                        <div class="metric-value">${(data.confidence * 100).toFixed(0)}%</div>
+                    </div>
+                </div>
+
+                <h4 style="margin-top: 20px; color: #667eea;">📋 Actions exécutées</h4>
+                <ul class="actions-list">
+                    ${data.actions_taken.map(action => `<li>${action}</li>`).join('')}
+                </ul>
+            `;
+
+            if (data.appointment_details) {
+                html += `
+                    <div class="appointment-details">
+                        <h4>📅 Rendez-vous confirmé</h4>
+                        <p><strong>ID:</strong> ${data.appointment_details.appointment_id}</p>
+                        <p><strong>Service:</strong> ${data.appointment_details.service_type}</p>
+                        <p><strong>Date/Heure:</strong> ${new Date(data.appointment_details.scheduled_date).toLocaleString('fr-FR')}</p>
+                        <p><strong>Durée:</strong> ${data.appointment_details.duration_minutes} minutes</p>
+                    </div>
+                `;
+            }
+
+            if (data.confirmation_sent) {
+                html += `
+                    <div style="background: #d1ecf1; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <h4 style="color: #0c5460;">✉️ Confirmation envoyée</h4>
+                        <p style="color: #0c5460;"><strong>Méthode:</strong> ${data.confirmation_sent.method}</p>
+                        <p style="color: #0c5460;"><strong>Email:</strong> ${data.confirmation_sent.recipient.email}</p>
+                        <p style="color: #0c5460;"><strong>SMS:</strong> ${data.confirmation_sent.recipient.phone}</p>
+                    </div>
+                `;
+            }
+
+            html += `
+                <div class="explanation-box">
+                    <h4 style="margin-bottom: 10px;">💬 Explication</h4>
+                    <p>${data.explanation}</p>
+                </div>
+
+                <div class="metric" style="margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <div class="metric-label" style="color: rgba(255,255,255,0.9);">Décision de l'agent</div>
+                    <div class="metric-value" style="color: white; font-size: 16px;">${data.decision}</div>
+                </div>
+            `;
+
+            document.getElementById('response-content').innerHTML = html;
+            document.getElementById('response-content').classList.add('active');
+        }
+    </script>
+</body>
+
+</html>
