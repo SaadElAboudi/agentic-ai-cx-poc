@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  agentic-cx-api:
+    build: .
+    container_name: agentic-cx-poc
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+      - ./agent:/app/agent
+    command: python main.py
+    restart: unless-stopped
