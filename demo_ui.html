@@ -521,7 +521,7 @@
                 // Use relative URL for Vercel deployment, or localhost for local dev
                 const apiUrl = window.location.hostname === 'localhost'
                     ? 'http://localhost:8000/agentic-cx'
-                    : '/agentic-cx';
+                    : '/api/agentic-cx';
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',

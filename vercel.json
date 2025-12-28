@@ -3,10 +3,6 @@
         {
             "source": "/demo",
             "destination": "/demo_ui.html"
-        },
-        {
-            "source": "/(.*)",
-            "destination": "/api/index"
         }
     ],
     "functions": {
