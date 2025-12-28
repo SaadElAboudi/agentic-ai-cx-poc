@@ -152,6 +152,9 @@ async def startup_event():
     print("=" * 60)
 
 
+# Vercel serverless handler
+handler = app
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(

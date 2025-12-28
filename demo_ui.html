@@ -518,7 +518,12 @@
             document.getElementById('loading').classList.add('active');
 
             try {
-                const response = await fetch('http://localhost:8000/agentic-cx', {
+                // Use relative URL for Vercel deployment, or localhost for local dev
+                const apiUrl = window.location.hostname === 'localhost' 
+                    ? 'http://localhost:8000/agentic-cx'
+                    : '/agentic-cx';
+                    
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
