@@ -12,7 +12,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 import os
-from agent import LLMCXAgent
+
+# Import the LLM agent directly to avoid any export issues
+from agent.llm_agent import LLMCXAgent
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -30,10 +32,27 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-# Initialize the LLM-powered CX Agent
+# Initialize the LLM-powered CX Agent with clear failure reporting.
 # Uses 'data' directory for mock data (relative to where main.py is run from)
 data_dir = os.path.join(os.path.dirname(__file__), "data")
-agent = LLMCXAgent(data_dir=data_dir)
+
+
+def build_agent() -> LLMCXAgent:
+    """Create the LLM agent and surface clear errors for deployment logs."""
+    try:
+        return LLMCXAgent(data_dir=data_dir)
+    except Exception as exc:  # noqa: BLE001 - bubble up with context
+        # Common causes in Render:
+        # - Missing GOOGLE_API_KEY env var
+        # - google-generativeai not installed or wrong Python version
+        # - Network egress blocked for the Gemini API
+        raise RuntimeError(
+            "Failed to initialize LLMCXAgent. "
+            "Ensure GOOGLE_API_KEY is set and google-generativeai is installed."
+        ) from exc
+
+
+agent = build_agent()
 
 
 # ==================== API MODELS ====================
