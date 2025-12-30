@@ -269,7 +269,7 @@ python3 test_agent.py
 
 ### Long-term (Production Deployment)
 - Integrate with real CX platform (Genesys, Twilio)
-- Add real LLM (OpenAI, Anthropic)
+- Add advanced LLM features (fine-tuning, multi-model)
 - Add database (PostgreSQL)
 - Add authentication & rate limiting
 - Deploy with proper monitoring & logging

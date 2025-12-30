@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 import os
-from agent import CXAgent
+from agent import LLMCXAgent
 
 # Initialize FastAPI app
 app = FastAPI(

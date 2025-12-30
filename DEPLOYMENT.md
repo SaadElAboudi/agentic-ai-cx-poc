@@ -37,16 +37,16 @@ python3 main.py
 python3 test_agent.py
 ```
 
-## Environment Variables (for future enhancements)
+## Environment Variables
 
 ```bash
 # API Server
 API_HOST=0.0.0.0
 API_PORT=8000
 
-# LLM Integration (future)
-OPENAI_API_KEY=sk-...
-LLM_MODEL=gpt-4
+# LLM Integration (Google Gemini - FREE)
+GOOGLE_API_KEY=your_free_gemini_key_from_https://makersuite.google.com/app/apikey
+LLM_MODEL=gemini-pro
 
 # CX Platform Integration (future)
 GENESYS_API_KEY=...

@@ -153,7 +153,7 @@ if all_data_complete and customer_eligible and slots_available:
 
 - **Language**: Python 3.9+
 - **Framework**: FastAPI (REST API)
-- **LLM**: OpenAI-compatible (plugin-ready)
+- **LLM**: Google Gemini (free tier available)
 - **Data**: JSON (mock systems)
 - **Deployment**: Docker-ready
 
@@ -419,7 +419,7 @@ print(response.json())
 
 ### Near-term (Production Readiness)
 
-- [ ] Real LLM integration (OpenAI GPT-4, Claude)
+- [x] Real LLM integration (Google Gemini)
 - [ ] Real CX platform APIs (Genesys, Twilio)
 - [ ] Multi-language support
 - [ ] Sentiment analysis (detect frustration)

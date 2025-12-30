@@ -1,5 +1,5 @@
 """
-llm_agent.py - LLM-powered Agent using OpenAI/Claude
+llm_agent.py - LLM-powered Agent using Google Gemini
 
 This agent uses a Large Language Model for:
 - Intent detection with nuance handling
@@ -17,7 +17,7 @@ The agent is truly "agentic" because it:
 import os
 import json
 from typing import Dict, Optional
-from openai import OpenAI
+import google.generativeai as genai
 
 from .actions import CXSystemMock
 from .decision import DecisionType
@@ -25,16 +25,23 @@ from .decision import DecisionType
 
 class LLMCXAgent:
     """
-    Agentic CX Agent powered by LLM (OpenAI/Claude).
+    Agentic CX Agent powered by LLM (Google Gemini).
 
     This agent uses AI to make autonomous decisions about customer requests.
     """
 
-    def __init__(self, data_dir: str = "data", model: str = "gpt-4o-mini"):
+    def __init__(self, data_dir: str = "data", model: str = "gemini-pro"):
         """Initialize the LLM-powered agent."""
         self.cx_system = CXSystemMock(data_dir)
         self.model = model
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        
+        # Configure Gemini API
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY environment variable not set. Get a free key at https://makersuite.google.com/app/apikey")
+        
+        genai.configure(api_key=api_key)
+        self.client = genai.GenerativeModel(model)
 
         self.system_prompt = """You are an autonomous AI agent for a contact center.
 Your role is to:
@@ -159,16 +166,20 @@ Analyze this customer message and decide:
 Respond in JSON format."""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.7,
-                max_tokens=500,
+            # Build the conversation history for Gemini
+            conversation = self.client.start_chat(history=[])
+            
+            # Send system prompt context
+            full_prompt = f"{self.system_prompt}\n\n{user_prompt}"
+            
+            response = conversation.send_message(
+                full_prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.7,
+                    max_output_tokens=500,
+                )
             )
-            return response.choices[0].message.content
+            return response.text
         except Exception as e:
             print(f"LLM query error: {e}")
             return json.dumps({

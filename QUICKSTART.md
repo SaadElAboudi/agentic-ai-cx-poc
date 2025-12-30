@@ -343,7 +343,7 @@ python3 test_agent.py
 This PoC is **intentionally simple** for clarity. For production:
 
 - Replace mock actions with real CX API calls (Genesys, Twilio)
-- Add real LLM integration (OpenAI, Claude)
+- Add advanced LLM features (fine-tuning, multi-model routing)
 - Add persistence (PostgreSQL for customer/appointment history)
 - Add security (authentication, rate limiting)
 - Add observability (logging, metrics, tracing)
