@@ -41,7 +41,18 @@ class LLMCXAgent:
             raise ValueError("GOOGLE_API_KEY environment variable not set. Get a free key at https://makersuite.google.com/app/apikey")
         
         genai.configure(api_key=api_key)
-        self.client = genai.GenerativeModel(model)
+
+        # Support current google-generativeai (>=0.8.x)
+        try:
+            self.client = genai.GenerativeModel(model_name=model)
+            self._use_generate_content = True
+        except Exception:
+            # Fallback for older packages if still present
+            if hasattr(genai, "GenerativeModel"):
+                self.client = genai.GenerativeModel(model)
+                self._use_generate_content = False
+            else:
+                raise
 
         self.system_prompt = """You are an autonomous AI agent for a contact center.
 Your role is to:
@@ -166,20 +177,29 @@ Analyze this customer message and decide:
 Respond in JSON format."""
 
         try:
-            # Build the conversation history for Gemini
-            conversation = self.client.start_chat(history=[])
-            
-            # Send system prompt context
             full_prompt = f"{self.system_prompt}\n\n{user_prompt}"
-            
+
+            if getattr(self, "_use_generate_content", False):
+                response = self.client.generate_content(
+                    full_prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.7,
+                        max_output_tokens=500,
+                    ),
+                )
+                return response.text
+
+            # Legacy fallback path
+            conversation = self.client.start_chat(history=[])
             response = conversation.send_message(
                 full_prompt,
                 generation_config=genai.types.GenerationConfig(
                     temperature=0.7,
                     max_output_tokens=500,
-                )
+                ),
             )
             return response.text
+
         except Exception as e:
             print(f"LLM query error: {e}")
             return json.dumps({
