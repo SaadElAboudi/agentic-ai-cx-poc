@@ -6,7 +6,7 @@ Exposes the CX Agent via REST API:
 - GET /health: Health check endpoint
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -30,10 +30,10 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-# Initialize the CX Agent
+# Initialize the LLM-powered CX Agent
 # Uses 'data' directory for mock data (relative to where main.py is run from)
 data_dir = os.path.join(os.path.dirname(__file__), "data")
-agent = CXAgent(data_dir=data_dir)
+agent = LLMCXAgent(data_dir=data_dir)
 
 
 # ==================== API MODELS ====================
@@ -132,6 +132,10 @@ async def root_ui():
         "description": "UI file not found",
     }
 
+@app.head("/")
+async def root_ui_head():
+    return Response(status_code=200)
+
 
 @app.get("/demo")
 async def demo_ui():
@@ -143,6 +147,10 @@ async def demo_ui():
         "service": "Agentic AI CX PoC",
         "description": "UI file not found",
     }
+
+@app.head("/demo")
+async def demo_ui_head():
+    return Response(status_code=200)
 
 
 # ==================== STARTUP ====================
