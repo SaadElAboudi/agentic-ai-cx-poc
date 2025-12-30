@@ -518,12 +518,9 @@
             document.getElementById('loading').classList.add('active');
 
             try {
-                // Auto-detect backend: localhost → local FastAPI, Vercel → Render API, otherwise relative
+                // Auto-detect backend: localhost → local FastAPI, otherwise use relative URL
                 const isLocal = window.location.hostname === 'localhost';
-                const isVercel = window.location.hostname.endsWith('vercel.app');
-                const apiBase = isLocal
-                    ? 'http://localhost:8000'
-                    : (isVercel ? 'https://agentic-ai-cx-poc.onrender.com' : '');
+                const apiBase = isLocal ? 'http://localhost:8000' : '';
 
                 // Create backend status banner
                 try {

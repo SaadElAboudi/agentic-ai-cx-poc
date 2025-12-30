@@ -518,10 +518,10 @@
             document.getElementById('loading').classList.add('active');
 
             try {
-                // Use relative URL for Vercel deployment, or localhost for local dev
+                // Auto-detect backend: localhost → local FastAPI, otherwise use relative URL
                 const apiUrl = window.location.hostname === 'localhost'
                     ? 'http://localhost:8000/agentic-cx'
-                    : '/api/agentic-cx';
+                    : '/agentic-cx';
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
