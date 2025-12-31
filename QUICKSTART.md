@@ -355,7 +355,7 @@ This PoC is **intentionally simple** for clarity. For production:
 Refer to README.md for:
 - Business context
 - Technical deep dive
-- Sabio integration details
+- Platform integration patterns
 - KPI impact analysis
 - Implementation roadmap
 
