@@ -30,7 +30,7 @@ class LLMCXAgent:
     This agent uses AI to make autonomous decisions about customer requests.
     """
 
-    def __init__(self, data_dir: str = "data", model: str = "gemini-pro"):
+    def __init__(self, data_dir: str = "data", model: str = "gemini-1.5-flash-latest"):
         """Initialize the LLM-powered agent."""
         self.cx_system = CXSystemMock(data_dir)
         self.model = model
@@ -46,13 +46,14 @@ class LLMCXAgent:
         try:
             self.client = genai.GenerativeModel(model_name=model)
             self._use_generate_content = True
-        except Exception:
-            # Fallback for older packages if still present
-            if hasattr(genai, "GenerativeModel"):
+        except Exception as e:
+            # Try without model_name parameter for backwards compatibility
+            try:
                 self.client = genai.GenerativeModel(model)
                 self._use_generate_content = False
-            else:
-                raise
+            except Exception:
+                raise ValueError(f"Failed to initialize Gemini model '{model}': {e}")
+
 
         self.system_prompt = """You are an autonomous AI agent for a contact center.
 Your role is to:
