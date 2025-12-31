@@ -118,9 +118,8 @@ Always be helpful, professional, and prioritize customer satisfaction.
         llm_response = self._query_llm(customer_id, message, customer_data)
 
         # STEP 3: Parse LLM response
-        try:
-            llm_decision = json.loads(llm_response)
-        except json.JSONDecodeError:
+        llm_decision = self._parse_llm_response(llm_response)
+        if llm_decision is None:
             return self._error_response("Failed to parse LLM response")
 
         intent = llm_decision.get("intent", "unknown")
@@ -184,6 +183,48 @@ Always be helpful, professional, and prioritize customer satisfaction.
                 response["confirmation_sent"] = result["confirmation"]
 
         return response
+
+    def _parse_llm_response(self, response_text: str) -> Optional[Dict]:
+        """
+        Parse LLM response with robust error handling.
+        
+        The LLM might return JSON wrapped in markdown code blocks or with extra text.
+        """
+        if not response_text:
+            return None
+        
+        # Try 1: Direct JSON parse
+        try:
+            return json.loads(response_text)
+        except json.JSONDecodeError:
+            pass
+        
+        # Try 2: Extract JSON from markdown code blocks
+        try:
+            import re
+            # Look for ```json ... ``` blocks
+            match = re.search(r'```(?:json)?\s*({.*?})\s*```', response_text, re.DOTALL)
+            if match:
+                json_str = match.group(1)
+                return json.loads(json_str)
+        except Exception:
+            pass
+        
+        # Try 3: Find JSON object in response
+        try:
+            import re
+            # Find the first { and last } and try to parse
+            start = response_text.find('{')
+            end = response_text.rfind('}')
+            if start != -1 and end != -1 and start < end:
+                json_str = response_text[start:end+1]
+                return json.loads(json_str)
+        except Exception:
+            pass
+        
+        # Try 4: Fallback - return a safe response
+        print(f"⚠️ Could not parse LLM response: {response_text[:200]}")
+        return None
 
     def _query_llm(self, customer_id: str, message: str, customer_data: dict) -> str:
         """Query the LLM for intent, goal, and decision."""
