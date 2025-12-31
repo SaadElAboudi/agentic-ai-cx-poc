@@ -81,30 +81,30 @@ class LLMCXAgent:
         """Initialize the system prompt for the LLM."""
         self.system_prompt = """You are an autonomous AI agent for a contact center.
 
-CRITICAL: You MUST respond ONLY with valid JSON, no other text before or after.
+⚠️  CRITICAL INSTRUCTIONS:
+- You MUST respond ONLY with a valid JSON object
+- NO markdown, NO explanation text before or after
+- Start your response with { and end with }
+- All field values must be strings (use quotes)
+- confidence must be a number between 0 and 1
 
-Your role:
-1. Understand customer intents
-2. Make autonomous decisions
-3. Explain reasoning clearly
-
-You handle:
-- Rebooking missed appointments
-- Escalating complex issues
-- Requesting clarification
-
-RESPOND ONLY WITH THIS JSON STRUCTURE (no markdown, no extra text):
+Required JSON fields (ALL MANDATORY):
 {
-  "intent": "missed_appointment_rebook|complaint|general_inquiry|unknown",
-  "goal": "brief goal description",
-  "decision": "what you will do",
+  "intent": "missed_appointment_rebook|complaint|general_inquiry|account_issue|unknown",
+  "goal": "string describing the goal",
+  "decision": "string describing your decision",
   "decision_type": "AUTOMATE|ESCALATE|CLARIFY",
-  "reasoning": "your reasoning",
-  "recommended_action": "specific action name",
-  "confidence": 0.85
+  "reasoning": "string explaining your reasoning",
+  "recommended_action": "rebook_appointment|escalate_to_human|request_clarification|other",
+  "confidence": 0.75
 }
 
-Remember: Output ONLY JSON. No markdown blocks. No explanations. JSON only.
+Examples of valid responses:
+{"intent":"missed_appointment_rebook","goal":"reschedule appointment","decision":"auto-rebook","decision_type":"AUTOMATE","reasoning":"customer is eligible and no recent misses","recommended_action":"rebook_appointment","confidence":0.9}
+
+{"intent":"complaint","goal":"escalate issue","decision":"create ticket","decision_type":"ESCALATE","reasoning":"customer is upset and needs human support","recommended_action":"escalate_to_human","confidence":0.95}
+
+REMEMBER: You MUST return ONLY valid JSON. No other text. No explanations. No markdown.
 """
 
     def process_customer_message(self, customer_id: str, message: str) -> Dict:
@@ -189,48 +189,94 @@ Remember: Output ONLY JSON. No markdown blocks. No explanations. JSON only.
 
     def _parse_llm_response(self, response_text: str) -> Optional[Dict]:
         """
-        Parse LLM response with robust error handling.
+        Parse LLM response with strict validation.
         
-        The LLM should return only JSON, but we handle various formats.
+        Tries multiple strategies to extract valid JSON, with detailed logging.
         """
         if not response_text or not response_text.strip():
+            print("❌ Empty response from LLM")
             return None
         
         response_text = response_text.strip()
         
         # Try 1: Direct JSON parse
         try:
-            return json.loads(response_text)
+            result = json.loads(response_text)
+            if self._validate_llm_response(result):
+                print("✅ Direct JSON parse successful")
+                return result
         except json.JSONDecodeError as e:
-            print(f"⚠️  Direct parse failed: {e}")
+            print(f"⚠️  Direct parse failed: {str(e)[:100]}")
         
         # Try 2: Extract JSON from markdown code blocks
         try:
             import re
-            # Look for ```json ... ``` or ```...``` blocks
             match = re.search(r'```(?:json)?\s*\n?({.*?})\s*\n?```', response_text, re.DOTALL)
             if match:
                 json_str = match.group(1)
-                return json.loads(json_str)
+                result = json.loads(json_str)
+                if self._validate_llm_response(result):
+                    print("✅ Markdown extraction successful")
+                    return result
         except Exception as e:
-            print(f"⚠️  Markdown extraction failed: {e}")
+            print(f"⚠️  Markdown extraction failed: {str(e)[:100]}")
         
-        # Try 3: Find JSON object in response (most lenient)
+        # Try 3: Find JSON object (most lenient)
         try:
             import re
-            # Find the first { and last } and try to parse
             start = response_text.find('{')
             end = response_text.rfind('}')
             if start != -1 and end != -1 and start < end:
                 json_str = response_text[start:end+1]
                 result = json.loads(json_str)
-                return result
+                if self._validate_llm_response(result):
+                    print("✅ Object extraction successful")
+                    return result
         except Exception as e:
-            print(f"⚠️  Object extraction failed: {e}")
+            print(f"⚠️  Object extraction failed: {str(e)[:100]}")
         
-        # Last resort: Log the actual response for debugging
-        print(f"⚠️  Could not parse LLM response. Raw response:\n{response_text[:500]}")
+        # No valid JSON found - log and return None
+        print(f"❌ Could not parse valid JSON. Response:\n{response_text[:300]}")
         return None
+
+    def _validate_llm_response(self, response: Dict) -> bool:
+        """
+        Validate that the response has all required fields.
+        
+        Returns True if valid, False otherwise.
+        """
+        required_fields = [
+            "intent",
+            "goal",
+            "decision",
+            "decision_type",
+            "reasoning",
+            "recommended_action",
+            "confidence"
+        ]
+        
+        for field in required_fields:
+            if field not in response:
+                print(f"❌ Missing required field: {field}")
+                return False
+        
+        # Validate decision_type is one of the allowed values
+        if response.get("decision_type") not in ["AUTOMATE", "ESCALATE", "CLARIFY"]:
+            print(f"❌ Invalid decision_type: {response.get('decision_type')}")
+            return False
+        
+        # Validate confidence is a number
+        try:
+            conf = float(response.get("confidence", 0))
+            if not (0 <= conf <= 1):
+                print(f"❌ Confidence out of range: {conf}")
+                return False
+        except (TypeError, ValueError):
+            print(f"❌ Invalid confidence value: {response.get('confidence')}")
+            return False
+        
+        print("✅ Response validation passed")
+        return True
 
     def _query_llm(self, customer_id: str, message: str, customer_data: dict) -> str:
         """Query the LLM for intent, goal, and decision."""
