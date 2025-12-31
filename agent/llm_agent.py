@@ -80,28 +80,31 @@ class LLMCXAgent:
     def _init_system_prompt(self):
         """Initialize the system prompt for the LLM."""
         self.system_prompt = """You are an autonomous AI agent for a contact center.
-Your role is to:
-1. Understand customer intents from their messages
-2. Make decisions about how to help them
-3. Explain your reasoning clearly
 
-You can:
-- Rebook missed appointments (if customer is eligible)
-- Escalate complex issues to humans
-- Request clarification when needed
+CRITICAL: You MUST respond ONLY with valid JSON, no other text before or after.
 
-For each customer message, respond in JSON:
+Your role:
+1. Understand customer intents
+2. Make autonomous decisions
+3. Explain reasoning clearly
+
+You handle:
+- Rebooking missed appointments
+- Escalating complex issues
+- Requesting clarification
+
+RESPOND ONLY WITH THIS JSON STRUCTURE (no markdown, no extra text):
 {
-  "intent": "missed_appointment_rebook|other_request|complaint|...",
-  "goal": "what you're trying to achieve",
-  "decision": "automate|escalate|clarify",
+  "intent": "missed_appointment_rebook|complaint|general_inquiry|unknown",
+  "goal": "brief goal description",
+  "decision": "what you will do",
   "decision_type": "AUTOMATE|ESCALATE|CLARIFY",
-  "reasoning": "explain why you made this decision",
-  "recommended_action": "what to do (rebook_appointment, escalate_to_human, etc.)",
-  "confidence": 0.0-1.0
+  "reasoning": "your reasoning",
+  "recommended_action": "specific action name",
+  "confidence": 0.85
 }
 
-Always be helpful, professional, and prioritize customer satisfaction.
+Remember: Output ONLY JSON. No markdown blocks. No explanations. JSON only.
 """
 
     def process_customer_message(self, customer_id: str, message: str) -> Dict:
@@ -188,29 +191,31 @@ Always be helpful, professional, and prioritize customer satisfaction.
         """
         Parse LLM response with robust error handling.
         
-        The LLM might return JSON wrapped in markdown code blocks or with extra text.
+        The LLM should return only JSON, but we handle various formats.
         """
-        if not response_text:
+        if not response_text or not response_text.strip():
             return None
+        
+        response_text = response_text.strip()
         
         # Try 1: Direct JSON parse
         try:
             return json.loads(response_text)
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as e:
+            print(f"⚠️  Direct parse failed: {e}")
         
         # Try 2: Extract JSON from markdown code blocks
         try:
             import re
-            # Look for ```json ... ``` blocks
-            match = re.search(r'```(?:json)?\s*({.*?})\s*```', response_text, re.DOTALL)
+            # Look for ```json ... ``` or ```...``` blocks
+            match = re.search(r'```(?:json)?\s*\n?({.*?})\s*\n?```', response_text, re.DOTALL)
             if match:
                 json_str = match.group(1)
                 return json.loads(json_str)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"⚠️  Markdown extraction failed: {e}")
         
-        # Try 3: Find JSON object in response
+        # Try 3: Find JSON object in response (most lenient)
         try:
             import re
             # Find the first { and last } and try to parse
@@ -218,12 +223,13 @@ Always be helpful, professional, and prioritize customer satisfaction.
             end = response_text.rfind('}')
             if start != -1 and end != -1 and start < end:
                 json_str = response_text[start:end+1]
-                return json.loads(json_str)
-        except Exception:
-            pass
+                result = json.loads(json_str)
+                return result
+        except Exception as e:
+            print(f"⚠️  Object extraction failed: {e}")
         
-        # Try 4: Fallback - return a safe response
-        print(f"⚠️ Could not parse LLM response: {response_text[:200]}")
+        # Last resort: Log the actual response for debugging
+        print(f"⚠️  Could not parse LLM response. Raw response:\n{response_text[:500]}")
         return None
 
     def _query_llm(self, customer_id: str, message: str, customer_data: dict) -> str:
