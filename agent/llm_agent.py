@@ -30,29 +30,50 @@ class LLMCXAgent:
     This agent uses AI to make autonomous decisions about customer requests.
     """
 
-    def __init__(self, data_dir: str = "data", model: str = "models/gemini-1.5-flash"):
+    def __init__(self, data_dir: str = "data", model: str = None):
         """Initialize the LLM-powered agent."""
         self.cx_system = CXSystemMock(data_dir)
-        self.model = model
         
         # Configure Gemini API
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
-            raise ValueError("GOOGLE_API_KEY environment variable not set. Get a free key at https://makersuite.google.com/app/apikey")
+            raise ValueError(
+                "GOOGLE_API_KEY environment variable not set.\n"
+                "Get a free key at: https://aistudio.google.com/app/apikey\n"
+                "Make sure you create it with Gemini API access (not just embedding)."
+            )
         
         genai.configure(api_key=api_key)
 
-        # Support current google-generativeai (>=0.8.x)
+        # Auto-detect available models if none specified
+        if model is None:
+            model = self._get_available_model()
+        
+        self.model = model
+        
+        # Initialize the client with the chosen model
         try:
-            self.client = genai.GenerativeModel(model_name=model)
+            self.client = genai.GenerativeModel(self.model)
             self._use_generate_content = True
         except Exception as e:
-            # Try without model_name parameter for backwards compatibility
-            try:
-                self.client = genai.GenerativeModel(model)
-                self._use_generate_content = False
-            except Exception:
-                raise ValueError(f"Failed to initialize Gemini model '{model}': {e}")
+            raise ValueError(
+                f"Failed to initialize Gemini model '{self.model}'.\n"
+                f"Error: {e}\n"
+                f"Run 'python3 list_models.py' to see available models."
+            )
+
+    def _get_available_model(self) -> str:
+        """Auto-detect an available generative model."""
+        try:
+            for model in genai.list_models():
+                if "generateContent" in model.supported_generation_methods:
+                    return model.name
+        except Exception:
+            pass
+        
+        # Fallback to a commonly available model
+        return "models/gemini-1.5-flash"
+
 
 
         self.system_prompt = """You are an autonomous AI agent for a contact center.
