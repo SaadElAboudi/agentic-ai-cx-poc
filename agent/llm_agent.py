@@ -61,6 +61,9 @@ class LLMCXAgent:
                 f"Error: {e}\n"
                 f"Run 'python3 list_models.py' to see available models."
             )
+        
+        # Initialize the system prompt
+        self._init_system_prompt()
 
     def _get_available_model(self) -> str:
         """Auto-detect an available generative model."""
@@ -74,8 +77,8 @@ class LLMCXAgent:
         # Fallback to a commonly available model
         return "models/gemini-1.5-flash"
 
-
-
+    def _init_system_prompt(self):
+        """Initialize the system prompt for the LLM."""
         self.system_prompt = """You are an autonomous AI agent for a contact center.
 Your role is to:
 1. Understand customer intents from their messages
