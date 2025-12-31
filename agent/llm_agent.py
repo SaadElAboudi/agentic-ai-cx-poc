@@ -30,7 +30,7 @@ class LLMCXAgent:
     This agent uses AI to make autonomous decisions about customer requests.
     """
 
-    def __init__(self, data_dir: str = "data", model: str = "models/gemini-1.5-flash"):
+    def __init__(self, data_dir: str = "data", model: str = "gemini-1.5-flash"):
         """Initialize the LLM-powered agent."""
         self.cx_system = CXSystemMock(data_dir)
         self.model = model
