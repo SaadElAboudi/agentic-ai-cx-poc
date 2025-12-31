@@ -498,6 +498,68 @@ Every decision is explained:
 
 ## Limitations & Scope
 
+---
+
+## Troubleshooting & Diagnostics
+
+### LLM Response Parsing Issues
+
+The system includes comprehensive diagnostic logging to help troubleshoot LLM response parsing failures. When you encounter "Failed to parse LLM response" errors:
+
+#### Quick Diagnostic Steps
+
+1. **Check available models**:
+   ```bash
+   python3 list_models.py
+   ```
+   - If only `embedding-gecko-001` appears: Your API key needs generative access
+   - Solution: Get a new key from https://aistudio.google.com (not makersuite.google.com)
+
+2. **Monitor Render logs** for diagnostic events:
+   ```
+   Search: PARSE_FAILED_ALL_METHODS
+   ```
+   - Check `first_200_chars` field in the log
+   - If it shows natural language text: LLM is ignoring system prompt
+   - If it shows JSON: Parsing logic needs adjustment
+
+3. **Check system prompt effectiveness**:
+   - Look for `PARSE_SUCCESS` events with different parsing methods
+   - If mostly `object_extraction`: LLM wrapping JSON in explanations
+   - If mostly `direct_json`: System working correctly
+
+#### Diagnostic Documents
+
+Comprehensive troubleshooting guides are available:
+
+- **`QUICK_REFERENCE.md`**: 1-minute checklist for common issues
+- **`DIAGNOSTIC_GUIDE.md`**: Detailed guide with event explanations
+- **`SESSION_SUMMARY.md`**: Technical implementation notes
+
+#### Log Format
+
+All diagnostics are logged with the prefix `🔍 DIAGNOSTIC:` and include:
+- `LLM_QUERY_START`: Model and query details
+- `LLM_RESPONSE_RECEIVED`: Response characteristics
+- `PARSE_ATTEMPT_START`: Response preview before parsing
+- `PARSE_SUCCESS`: Which parsing strategy worked
+- `PARSE_FAILED_ALL_METHODS`: Full diagnostics when all parsing fails
+- `LLM_QUERY_ERROR`: API errors
+
+Example of a healthy flow:
+```
+LLM_QUERY_START → LLM_RESPONSE_RECEIVED → PARSE_SUCCESS → Structured Response
+```
+
+Example of a parsing issue:
+```
+LLM_QUERY_START → LLM_RESPONSE_RECEIVED (text instead of JSON) → PARSE_FAILED_ALL_METHODS
+```
+
+---
+
+## Known Limitations
+
 This PoC is **NOT production-grade** but demonstrates:
 
 ✅ Autonomous decision-making  
