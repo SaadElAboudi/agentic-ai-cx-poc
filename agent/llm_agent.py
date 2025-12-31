@@ -194,15 +194,21 @@ REMEMBER: You MUST return ONLY valid JSON. No other text. No explanations. No ma
         Tries multiple strategies to extract valid JSON, with detailed logging.
         """
         if not response_text or not response_text.strip():
+            self._log_diagnostics("PARSE_ERROR", {"reason": "empty_response"})
             print("❌ Empty response from LLM")
             return None
         
         response_text = response_text.strip()
+        self._log_diagnostics("PARSE_ATTEMPT_START", {
+            "response_length": len(response_text),
+            "response_preview": response_text[:150]
+        })
         
         # Try 1: Direct JSON parse
         try:
             result = json.loads(response_text)
             if self._validate_llm_response(result):
+                self._log_diagnostics("PARSE_SUCCESS", {"method": "direct_json"})
                 print("✅ Direct JSON parse successful")
                 return result
         except json.JSONDecodeError as e:
@@ -216,6 +222,7 @@ REMEMBER: You MUST return ONLY valid JSON. No other text. No explanations. No ma
                 json_str = match.group(1)
                 result = json.loads(json_str)
                 if self._validate_llm_response(result):
+                    self._log_diagnostics("PARSE_SUCCESS", {"method": "markdown_extraction"})
                     print("✅ Markdown extraction successful")
                     return result
         except Exception as e:
@@ -230,12 +237,18 @@ REMEMBER: You MUST return ONLY valid JSON. No other text. No explanations. No ma
                 json_str = response_text[start:end+1]
                 result = json.loads(json_str)
                 if self._validate_llm_response(result):
+                    self._log_diagnostics("PARSE_SUCCESS", {"method": "object_extraction"})
                     print("✅ Object extraction successful")
                     return result
         except Exception as e:
             print(f"⚠️  Object extraction failed: {str(e)[:100]}")
         
         # No valid JSON found - log and return None
+        self._log_diagnostics("PARSE_FAILED_ALL_METHODS", {
+            "response_length": len(response_text),
+            "first_200_chars": response_text[:200],
+            "last_100_chars": response_text[-100:]
+        })
         print(f"❌ Could not parse valid JSON. Response:\n{response_text[:300]}")
         return None
 
@@ -278,6 +291,28 @@ REMEMBER: You MUST return ONLY valid JSON. No other text. No explanations. No ma
         print("✅ Response validation passed")
         return True
 
+    def _log_diagnostics(self, event: str, data: dict):
+        """Log diagnostic information for debugging on Render."""
+        import datetime
+        import os
+        
+        log_entry = {
+            "timestamp": datetime.datetime.now().isoformat(),
+            "event": event,
+            "data": data
+        }
+        
+        # Print to stdout (captured by Render)
+        print(f"🔍 DIAGNOSTIC: {json.dumps(log_entry, indent=2)}")
+        
+        # Also try to write to file if possible (for local debugging)
+        try:
+            log_file = os.path.join(os.getcwd(), "llm_diagnostics.log")
+            with open(log_file, "a") as f:
+                f.write(json.dumps(log_entry) + "\n")
+        except:
+            pass  # Ignore file write errors
+
     def _query_llm(self, customer_id: str, message: str, customer_data: dict) -> str:
         """Query the LLM for intent, goal, and decision."""
         user_prompt = f"""Customer ID: {customer_id}
@@ -296,6 +331,12 @@ Respond in JSON format."""
 
         try:
             full_prompt = f"{self.system_prompt}\n\n{user_prompt}"
+            
+            self._log_diagnostics("LLM_QUERY_START", {
+                "customer_id": customer_id,
+                "model": self.model,
+                "message_length": len(message)
+            })
 
             if getattr(self, "_use_generate_content", False):
                 response = self.client.generate_content(
@@ -305,7 +346,13 @@ Respond in JSON format."""
                         max_output_tokens=500,
                     ),
                 )
-                return response.text
+                response_text = response.text
+                self._log_diagnostics("LLM_RESPONSE_RECEIVED", {
+                    "response_length": len(response_text),
+                    "response_preview": response_text[:200],
+                    "api_method": "generate_content"
+                })
+                return response_text
 
             # Legacy fallback path
             conversation = self.client.start_chat(history=[])
@@ -316,9 +363,19 @@ Respond in JSON format."""
                     max_output_tokens=500,
                 ),
             )
-            return response.text
+            response_text = response.text
+            self._log_diagnostics("LLM_RESPONSE_RECEIVED", {
+                "response_length": len(response_text),
+                "response_preview": response_text[:200],
+                "api_method": "chat"
+            })
+            return response_text
 
         except Exception as e:
+            self._log_diagnostics("LLM_QUERY_ERROR", {
+                "error_type": type(e).__name__,
+                "error_message": str(e)
+            })
             print(f"LLM query error: {e}")
             return json.dumps({
                 "intent": "error",
