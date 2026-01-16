@@ -63,6 +63,13 @@ class CustomerMessage(BaseModel):
     message: str
 
 
+class SlotSelectionRequest(BaseModel):
+    """Request model for selecting an available appointment slot."""
+    customer_id: str
+    slot_id: str
+    session_id: str
+
+
 class AgentResponse(BaseModel):
     """Response model from the agent."""
     intent: str
@@ -73,6 +80,8 @@ class AgentResponse(BaseModel):
     status: str
     confidence: float
     explanation: str
+    available_slots: Optional[list] = None
+    session_id: Optional[str] = None
     escalation_ticket: Optional[dict] = None
     appointment_details: Optional[dict] = None
     confirmation_sent: Optional[dict] = None
@@ -127,6 +136,58 @@ async def process_customer_request(request: CustomerMessage) -> AgentResponse:
         raise HTTPException(
             status_code=500,
             detail=f"Agent error: {str(e)}"
+        )
+
+
+@app.post("/agentic-cx/confirm-slot", response_model=AgentResponse)
+async def confirm_appointment_slot(request: SlotSelectionRequest) -> AgentResponse:
+    """
+    Confirm appointment slot selection after client has chosen.
+
+    This endpoint is called when a customer selects one of the available slots
+    that were returned by the initial /agentic-cx request.
+
+    Args:
+        customer_id: Unique identifier for the customer
+        slot_id: The ID of the selected appointment slot
+        session_id: Session ID from the initial agent response
+
+    Returns:
+        AgentResponse with confirmed appointment details
+
+    Example:
+        {
+            "customer_id": "123",
+            "slot_id": "slot_20250116_1400",
+            "session_id": "session_123_1705424400"
+        }
+    """
+    try:
+        # Validate inputs
+        if not request.customer_id or not request.customer_id.strip():
+            raise HTTPException(status_code=400, detail="customer_id is required")
+
+        if not request.slot_id or not request.slot_id.strip():
+            raise HTTPException(status_code=400, detail="slot_id is required")
+
+        if not request.session_id or not request.session_id.strip():
+            raise HTTPException(status_code=400, detail="session_id is required")
+
+        # Process the slot confirmation through the agent
+        result = agent.confirm_appointment_booking(
+            customer_id=request.customer_id,
+            slot_id=request.slot_id,
+            session_id=request.session_id,
+        )
+
+        return AgentResponse(**result)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Confirmation error: {str(e)}"
         )
 
 

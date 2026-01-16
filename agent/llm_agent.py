@@ -16,6 +16,7 @@ The agent is truly "agentic" because it:
 
 import os
 import json
+import time
 from typing import Dict, Optional
 import google.generativeai as genai
 
@@ -184,6 +185,65 @@ REMEMBER: You MUST return ONLY valid JSON. No other text. No explanations. No ma
                 response["appointment_details"] = result["appointment_details"]
             if "confirmation" in result:
                 response["confirmation_sent"] = result["confirmation"]
+            if "available_slots" in result:
+                response["available_slots"] = result["available_slots"]
+            if "session_id" in result:
+                response["session_id"] = result["session_id"]
+
+        return response
+
+    def confirm_appointment_booking(
+        self, customer_id: str, slot_id: str, session_id: str
+    ) -> Dict:
+        """
+        Confirm and finalize appointment booking when customer selects a slot.
+
+        Args:
+            customer_id: Customer ID
+            slot_id: Selected appointment slot ID
+            session_id: Session ID for validation
+
+        Returns:
+            Dictionary with confirmation details
+        """
+        # STEP 1: Fetch customer context
+        customer_data = self.cx_system.get_customer(customer_id)
+
+        # STEP 2: Execute the actual rebooking with the chosen slot
+        actions_taken, result, status = self._execute_rebooking(
+            customer_id, customer_data, slot_id=slot_id
+        )
+
+        # Log the interaction
+        self.cx_system.log_agent_interaction(
+            customer_id=customer_id,
+            intent="missed_appointment_rebook_confirmed",
+            decision=f"Customer selected slot {slot_id} and confirmed booking",
+            actions=actions_taken,
+            status=status,
+        )
+
+        # Build response
+        response = {
+            "intent": "missed_appointment_rebook",
+            "goal": "Confirm and finalize the selected appointment",
+            "decision": f"Booking confirmed for the selected time slot",
+            "decision_type": "AUTOMATE",
+            "actions_taken": actions_taken,
+            "status": status,
+            "confidence": 0.95,
+            "explanation": "Your appointment has been confirmed for the selected time slot. You'll receive a confirmation via email and SMS.",
+        }
+
+        # Add result data
+        if result:
+            if "appointment_details" in result:
+                response["appointment_details"] = result["appointment_details"]
+            if "confirmation" in result:
+                response["confirmation_sent"] = result["confirmation"]
+            if "error" in result:
+                response["status"] = "escalated"
+                response["explanation"] = f"Unable to confirm booking: {result['error']}"
 
         return response
 
@@ -387,21 +447,47 @@ Respond in JSON format."""
                 "confidence": 0.0,
             })
 
-    def _execute_rebooking(self, customer_id: str, customer_data: dict) -> tuple:
-        """Execute rebooking autonomously."""
-        actions = ["check_eligibility", "find_available_slots", "rebook_appointment"]
+    def _execute_rebooking(self, customer_id: str, customer_data: dict, slot_id: str = None) -> tuple:
+        """
+        Execute rebooking with optional client choice.
+        
+        If slot_id is provided: Book the specific slot (client confirmed choice)
+        If slot_id is None: Return available slots for client to choose from
+        """
+        actions = ["check_eligibility", "find_available_slots"]
 
+        # Step 1: Check eligibility
         eligibility = self.cx_system.check_eligibility(customer_id)
         if not eligibility.get("eligible", False):
             return actions, {"error": eligibility.get("reason", "Not eligible")}, "escalated"
 
+        # Step 2: Get available slots
         available_slots = self.cx_system.get_available_slots(customer_id)
         if not available_slots:
             return actions, {"error": "No available slots"}, "escalated"
 
-        # Rebook into the first available slot
-        slot = available_slots[0]
-        rebook_result = self.cx_system.rebook_appointment(customer_id, slot["slot_id"])
+        # Step 3a: If client hasn't chosen yet, return slots for selection
+        if slot_id is None:
+            # Generate a session ID for this rebooking request
+            session_id = f"session_{customer_id}_{int(time.time())}"
+            slots_for_client = [
+                {
+                    "slot_id": slot["slot_id"],
+                    "date": slot["date"],
+                    "time": slot["time"],
+                    "service_type": slot.get("service_type", "consultation")
+                }
+                for slot in available_slots
+            ]
+            return actions, {
+                "session_id": session_id,
+                "available_slots": slots_for_client,
+                "message": "Please choose one of the available appointment slots"
+            }, "awaiting_client_choice"
+
+        # Step 3b: Client has chosen - book the selected slot
+        actions.append("rebook_appointment")
+        rebook_result = self.cx_system.rebook_appointment(customer_id, slot_id)
 
         if not rebook_result["success"]:
             return actions, {"error": rebook_result["reason"]}, "escalated"
