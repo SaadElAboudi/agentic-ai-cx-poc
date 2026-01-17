@@ -302,6 +302,23 @@ REMEMBER: You MUST return ONLY valid JSON. No other text. No explanations. No ma
                     return result
         except Exception as e:
             print(f"⚠️  Object extraction failed: {str(e)[:100]}")
+
+        # Try 4: Normalize quotes and retry (handles single quotes or escaped newlines)
+        try:
+            import re
+            start = response_text.find('{')
+            end = response_text.rfind('}')
+            if start != -1 and end != -1 and start < end:
+                candidate = response_text[start:end+1]
+                normalized = candidate.replace("'", '"')
+                normalized = re.sub(r"\\n", " ", normalized)
+                result = json.loads(normalized)
+                if self._validate_llm_response(result):
+                    self._log_diagnostics("PARSE_SUCCESS", {"method": "normalized_quotes"})
+                    print("✅ Normalized quotes parsing successful")
+                    return result
+        except Exception as e:
+            print(f"⚠️  Normalized parsing failed: {str(e)[:100]}")
         
         # No valid JSON found - log and return None
         self._log_diagnostics("PARSE_FAILED_ALL_METHODS", {
@@ -314,41 +331,42 @@ REMEMBER: You MUST return ONLY valid JSON. No other text. No explanations. No ma
 
     def _validate_llm_response(self, response: Dict) -> bool:
         """
-        Validate that the response has all required fields.
-        
-        Returns True if valid, False otherwise.
+        Validate that the response has required fields.
+
+        More tolerant: fills sensible defaults instead of failing hard.
+        Returns True always, but logs adjustments.
         """
-        required_fields = [
-            "intent",
-            "goal",
-            "decision",
-            "decision_type",
-            "reasoning",
-            "recommended_action",
-            "confidence"
-        ]
-        
-        for field in required_fields:
+        defaults = {
+            "intent": "unknown",
+            "goal": "help the customer",
+            "decision": "",
+            "decision_type": "CLARIFY",
+            "reasoning": "",
+            "recommended_action": "request_clarification",
+            "confidence": 0.5,
+        }
+
+        for field, default_value in defaults.items():
             if field not in response:
-                print(f"❌ Missing required field: {field}")
-                return False
-        
+                print(f"⚠️  Missing field '{field}', using default '{default_value}'")
+                response[field] = default_value
+
         # Validate decision_type is one of the allowed values
         if response.get("decision_type") not in ["AUTOMATE", "ESCALATE", "CLARIFY"]:
-            print(f"❌ Invalid decision_type: {response.get('decision_type')}")
-            return False
-        
-        # Validate confidence is a number
+            print(f"⚠️  Invalid decision_type: {response.get('decision_type')} -> forcing CLARIFY")
+            response["decision_type"] = "CLARIFY"
+
+        # Validate confidence is a number between 0 and 1
         try:
-            conf = float(response.get("confidence", 0))
+            conf = float(response.get("confidence", 0.5))
             if not (0 <= conf <= 1):
-                print(f"❌ Confidence out of range: {conf}")
-                return False
+                print(f"⚠️  Confidence out of range: {conf} -> forcing 0.5")
+                response["confidence"] = 0.5
         except (TypeError, ValueError):
-            print(f"❌ Invalid confidence value: {response.get('confidence')}")
-            return False
-        
-        print("✅ Response validation passed")
+            print(f"⚠️  Invalid confidence value: {response.get('confidence')} -> forcing 0.5")
+            response["confidence"] = 0.5
+
+        print("✅ Response validation passed (tolerant mode)")
         return True
 
     def _log_diagnostics(self, event: str, data: dict):
